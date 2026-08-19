@@ -1,4 +1,19 @@
+# Environments
 .venv/
-__pycache__/
+venv/
+env/
+
+# Secrets and Configs
 .env
-.streamlit/secrets.toml
+.streamlit/
+secrets.toml
+
+# Python Cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Temporary/Scratch Files
+refactor.py
+.DS_Store
