@@ -1,7 +1,7 @@
 name: Update Market Dashboard
 
 on:
-  # Run automatically every 4 hours
+  # Run automatically every day at 10:30 AM EST (15:30 UTC)
   schedule:
     - cron: '30 15 * * *'
   # Allow manual trigger from the Actions tab
@@ -43,5 +43,5 @@ jobs:
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           
           # Only commit if the HTML file actually changed
-          git add market_risk.html
+          git add docs/market_risk.html
           git diff --quiet && git diff --staged --quiet || (git commit -m "Auto-update market dashboard" && git push)

@@ -441,10 +441,11 @@ def generate_dashboard():
     template = env.get_template("dashboard.html")
     output_html = template.render(context)
 
-    with open("market_risk.html", "w", encoding="utf-8") as f:
+    os.makedirs("docs", exist_ok=True)
+    with open("docs/market_risk.html", "w", encoding="utf-8") as f:
         f.write(output_html)
         
-    print("Done! Dashboard generated at market_risk.html")
+    print("Done! Dashboard generated at docs/market_risk.html")
 
 if __name__ == "__main__":
     generate_dashboard()
