@@ -87,6 +87,7 @@ TRIGGERS = {
     "High-Beta/Low-Vol Ratio": "< 10-day MA (Falling)",
     "Copper/Gold Ratio": "< 10-day MA (Falling)",
     "Lumber/Gold Ratio": "< 10-day MA (Falling)",
+    "Oil": "> $110",
 }
 
 DESCRIPTIONS = {
@@ -117,7 +118,8 @@ DESCRIPTIONS = {
     "SKEW Index": "CBOE SKEW Index measures the perceived tail risk in S&P 500 options. High values mean investors are buying crash protection.",
     "High-Beta/Low-Vol Ratio": "Ratio of SPHB to SPLV. A declining ratio indicates investors are rushing to safe-haven stocks (risk-off).",
     "Copper/Gold Ratio": "Copper represents economic growth while gold is a safe haven. A falling ratio signals economic slowdown expectations.",
-    "Lumber/Gold Ratio": "Classic macro risk-on/risk-off indicator. Lumber is tied to housing and growth; gold to safety."
+    "Lumber/Gold Ratio": "Classic macro risk-on/risk-off indicator. Lumber is tied to housing and growth; gold to safety.",
+    "Oil": "Crude oil (WTI) futures price. Surging prices can act as a regressive tax on consumers and trigger stagflation fears."
 }
 
 def level_for(name, value):
@@ -278,6 +280,20 @@ def get_indicator_data(n):
         except Exception:
             pass
         return None, "N/A", None, "—", "", ""
+    elif n == "Oil":
+        try:
+            hist = yf.Ticker("CL=F").history(period="1mo")
+            if len(hist) > 0:
+                v = float(hist['Close'].iloc[-1])
+                lev = "Warning" if v >= 110 else "Watch" if v >= 90 else "Normal"
+                delta = v - float(hist['Close'].iloc[-6]) if len(hist) > 6 else 0
+                txt = f"${v:.2f}"
+                delta_txt = f"{delta:+.2f} 1w"
+                trigger_text = f"Trigger: {TRIGGERS.get(n, '')}"
+                return v, lev, delta, txt, delta_txt, trigger_text
+        except Exception:
+            pass
+        return None, "N/A", None, "—", "", ""
     else:
         v = latest(n)
         lev = level_for(n,v)
@@ -300,7 +316,8 @@ def fetch_all_data():
         ("Rates & Liquidity", ["10Y Treasury","2Y Treasury","10Y-2Y","10Y-3M","SOFR","Fed Funds","M2"]),
         ("Inflation", ["CPI","Core CPI","PPI","10Y Breakeven"]),
         ("Growth & Labor", ["Unemployment","Initial Claims","Continuing Claims","Real GDP","Retail Sales","Industrial Production","Consumer Sentiment"]),
-        ("Market Sentiment & Breadth", ["AI/Semiconductor Breadth", "SKEW Index", "High-Beta/Low-Vol Ratio", "Copper/Gold Ratio", "Lumber/Gold Ratio"]),
+        ("Market Sentiment & Breadth", ["AI/Semiconductor Breadth", "SKEW Index", "High-Beta/Low-Vol Ratio"]),
+        ("Commodities", ["Copper/Gold Ratio", "Lumber/Gold Ratio", "Oil"]),
     ]
     for title, names in groups_def:
         for n in names:
@@ -311,7 +328,7 @@ def fetch_all_data():
 def risk_score():
     names = ["VIX","HY Spread","BB Spread","CCC Spread","10Y Treasury",
              "10Y-2Y","10Y-3M","10Y Breakeven","Unemployment","Financial Conditions",
-             "SKEW Index", "High-Beta/Low-Vol Ratio", "Copper/Gold Ratio", "Lumber/Gold Ratio", "AI/Semiconductor Breadth"]
+             "SKEW Index", "High-Beta/Low-Vol Ratio", "Copper/Gold Ratio", "Lumber/Gold Ratio", "AI/Semiconductor Breadth", "Oil"]
     vals = {}
     for n in names:
         if n in ALL_INDICATOR_DATA:
@@ -414,7 +431,27 @@ def generate_dashboard():
         {"Indicator": "Oil", "Trigger": "> $110", "Why": "Stagflation/geopolitical shock"},
     ]
 
+    warnings = [k for k, v in vals.items() if v[1] in ("Warning", "Crisis")]
+    watches = [k for k, v in vals.items() if v[1] == "Watch"]
+    
+    narrative = f"The overall market risk regime is currently classified as {score_label} with an aggregate risk score of {score}/100. "
+    
+    if score < 25:
+        narrative += "Macroeconomic and sentiment indicators remain largely benign. Credit markets are functioning normally, and tail-risk pricing does not currently indicate elevated panic among institutional investors."
+    elif score < 50:
+        narrative += "While underlying economic foundations remain mostly stable, some underlying stress is beginning to emerge. "
+    elif score < 75:
+        narrative += "Systemic risk is highly elevated. Investors should proceed with caution as key early-warning thresholds have been breached. "
+    else:
+        narrative += "We are currently in an extreme risk regime. Severe dislocations in credit markets, macroeconomic deterioration, or panicked sentiment strongly suggest an ongoing or impending market crash. "
+
+    if warnings:
+        narrative += f" Specifically, critical warnings have been triggered by {', '.join(warnings)}. "
+    if watches:
+        narrative += f" Additionally, {', '.join(watches)} are currently on our watch list for emerging stress."
+
     context = {
+        "summary_narrative": narrative,
         "timestamp": datetime.now().astimezone().strftime('%Y-%m-%d %H:%M:%S %Z'),
         "FRED_KEY_MISSING": not bool(FRED_KEY),
         "mkt_cards": mkt_cards,
